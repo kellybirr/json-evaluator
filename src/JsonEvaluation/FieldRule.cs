@@ -67,6 +67,8 @@ namespace Coderz.Json.Evaluation
                 Type = FieldType.DateTime;
             else if (typeof(T) == typeof(DateTime))
                 Type = FieldType.Date;
+            else if (typeof(T) == typeof(TimeSpan))
+                Type = FieldType.Duration;
         }
 
         protected virtual bool Compare(T dataValue) => false;
@@ -118,6 +120,10 @@ namespace Coderz.Json.Evaluation
             if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token) is T dT)
                 return dT;    // special handling for DateTime (date only)
 
+            if (typeof(T) == typeof(TimeSpan) && DateParser.Duration(token) is T tsT)
+                return tsT;    // special handling for TimeSpan (duration)
+
+            // default conversion
             return (T) Convert.ChangeType(token, typeof(T));
         }
     }

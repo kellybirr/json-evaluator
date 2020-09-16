@@ -95,7 +95,7 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.DoesNotContain : Operator.Contains;
 
-        protected override bool MissingToken => !Not;
+        protected override bool MissingToken => Not;
 
         public override bool Evaluate(JObject data)
         {
@@ -129,7 +129,7 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.DoesNotBeginWith : Operator.BeginsWith;
 
-        protected override bool MissingToken => !Not;
+        protected override bool MissingToken => Not;
 
         protected override bool Compare(T dataValue)
         {
@@ -147,7 +147,7 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.DoesNotEndWith : Operator.EndsWith;
 
-        protected override bool MissingToken => !Not;
+        protected override bool MissingToken => Not;
 
         protected override bool Compare(T dataValue)
         {

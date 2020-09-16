@@ -38,7 +38,8 @@
         Double,
         Boolean,
         DateTime,
-        Date
+        Date,
+        Duration
     }
 
     public static class TokenName

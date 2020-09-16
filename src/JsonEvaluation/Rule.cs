@@ -59,6 +59,7 @@ namespace Coderz.Json.Evaluation
                 FieldType.Boolean => FieldRule.Create<bool>(op),
                 FieldType.DateTime => FieldRule.Create<DateTimeOffset>(op),
                 FieldType.Date => FieldRule.Create<DateTime>(op),
+                FieldType.Duration => FieldRule.Create<TimeSpan>(op),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
