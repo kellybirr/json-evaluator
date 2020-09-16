@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -113,35 +112,13 @@ namespace Coderz.Json.Evaluation
 
         protected static T FromJToken(JToken token)
         {
-            if (typeof(T) == typeof(DateTimeOffset) && DateTimeOffsetFromJToken(token) is T dtoT)
+            if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token) is T dtoT)
                 return dtoT;    // special handling for DateTimeOffset (date + time + offset)
 
-            if (typeof(T) == typeof(DateTime) && DateFromJToken(token) is T dT)
+            if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token) is T dT)
                 return dT;    // special handling for DateTime (date only)
 
             return (T) Convert.ChangeType(token, typeof(T));
-        }
-
-        private static DateTime DateFromJToken(JToken token) => DateTimeOffsetFromJToken(token).Date;
-
-        private static DateTimeOffset DateTimeOffsetFromJToken(JToken token)
-        {
-            string tokenStr = token?.ToString();
-            if (string.IsNullOrWhiteSpace(tokenStr))
-                throw new ArgumentOutOfRangeException(nameof(token));
-
-            if (DateTimeOffset.TryParse(tokenStr, out DateTimeOffset dto))
-                return dto;
-
-            if (DateTimeOffset.TryParse(tokenStr, null, DateTimeStyles.RoundtripKind, out dto))
-                return dto;
-
-            //if (DateTime.TryParse(tokenStr, null, DateTimeStyles.RoundtripKind, out DateTime dtr))
-            //    return new DateTimeOffset(dtr, TimeSpan.Zero);
-
-            // not TryParse() - we want exception on fail
-            DateTime dt = DateTime.Parse(tokenStr);
-            return new DateTimeOffset(dt, TimeSpan.Zero);
         }
     }
 }
