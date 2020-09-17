@@ -49,6 +49,9 @@ namespace Coderz.Json.Evaluation
                 _ => throw new ArgumentOutOfRangeException(nameof(op), op, "Invalid Operator")
             };
         }
+
+        protected int CompareStrings(string dataStr, string compareStr)
+            => string.Compare(dataStr, compareStr, Options.Culture, Options.CompareOptions);
     }
 
     public abstract class FieldRule<T> : FieldRule where T : IComparable<T>, IEquatable<T>
@@ -71,7 +74,10 @@ namespace Coderz.Json.Evaluation
                 Type = FieldType.Duration;
         }
 
-        protected virtual bool Compare(DataValue<T> dataValue) => false;
+        protected virtual bool Compare(DataValue<T> dataValue)
+            => dataValue.HasValue && CompareT(dataValue.Value);
+
+        protected virtual bool CompareT(T dataValueT) => false;
 
         protected virtual bool MissingToken => false;
 
@@ -92,7 +98,6 @@ namespace Coderz.Json.Evaluation
             return fieldPath.Aggregate<string, JToken>(data, (current, name) => current?[name]);
         }
 
-
         protected IList<T> CompareList { get; private set; }
 
         protected virtual T CompareValue { get; private set; }
@@ -112,19 +117,22 @@ namespace Coderz.Json.Evaluation
             }
         }
 
-        protected static DataValue<T> FromJToken(JToken token)
+        protected DataValue<T> FromJToken(JToken token)
         {
-            if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token) is DataValue<T> dtoT)
+            if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token, Options.Culture) is DataValue<T> dtoT)
                 return dtoT;    // special handling for DateTimeOffset (date + time + offset)
 
-            if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token) is DataValue<T> dT)
+            if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token, Options.Culture) is DataValue<T> dT)
                 return dT;    // special handling for DateTime (date only)
 
-            if (typeof(T) == typeof(TimeSpan) && DateParser.Duration(token) is DataValue<T> tsT)
+            if (typeof(T) == typeof(TimeSpan) && DateParser.Duration(token, Options.Culture) is DataValue<T> tsT)
                 return tsT;    // special handling for TimeSpan (duration)
 
             // default conversion
             return new DataValue<T>((T)Convert.ChangeType(token, typeof(T)));
         }
+
+        protected int CompareStrings(T dataValueT, T compareValueT) 
+            => CompareStrings(dataValueT.ToString(), compareValueT.ToString());
     }
 }

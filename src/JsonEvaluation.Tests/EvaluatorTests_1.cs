@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Coderz.Json.Evaluation;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -42,10 +43,13 @@ namespace JsonEvaluation.Tests
         }
 
         [Fact]
-        public void Test_Rule_1()
+        public void Test_Rule_1_IgnoreCase()
         {
             JObject json = RuleJson();
-            var eval = new JsonEvaluator(json);
+            var eval = new JsonEvaluator(json)
+            {
+                Options = { CompareOptions = CompareOptions.IgnoreCase }
+            };
             _output.WriteLine(eval.ToString());
 
             Assert.True(
@@ -65,6 +69,59 @@ namespace JsonEvaluation.Tests
                 })
             );
 
+        }
+
+        [Fact]
+        public void Test_Rule_1_IgnoreAccent()
+        {
+            JObject json = RuleJson();
+            var eval = new JsonEvaluator(json)
+            {
+                Options = { CompareOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace }
+            };
+            _output.WriteLine(eval.ToString());
+
+            Assert.True(
+                eval.Evaluate(new JObject
+                {
+                    {"name", "Top plays by Joë Montana"},
+                    {"price", 10.00},
+                    {"category", 2}
+                })
+            );
+
+            Assert.False(
+                eval.Evaluate(new JObject
+                {
+                    {"amount", 30},
+                    {"date", "12/31/2019"}
+                })
+            );
+        }
+
+        [Fact]
+        public void Test_Rule_1_Exact()
+        {
+            JObject json = RuleJson();
+            var eval = new JsonEvaluator(json);
+            _output.WriteLine(eval.ToString());
+
+            Assert.False(
+                eval.Evaluate(new JObject
+                {
+                    {"name", "Top plays by Joe Montana"},
+                    {"price", 10.00},
+                    {"category", 2}
+                })
+            );
+
+            Assert.False(
+                eval.Evaluate(new JObject
+                {
+                    {"amount", 30},
+                    {"date", "12/31/2019"}
+                })
+            );
         }
     }
 }

@@ -19,6 +19,12 @@ namespace Coderz.Json.Evaluation
 
         public override string ToString() => Root.ToString();
 
+        public RuleOptions Options
+        {
+            get => Root.Options;
+            set => Root.Options = value;
+        }
+
         public bool Evaluate(JObject data) => Root.Evaluate(data);
 
         public IEnumerable<JObject> Filter(IEnumerable<JObject> srcData) => srcData.Where(Root.Evaluate);
@@ -34,4 +40,5 @@ namespace Coderz.Json.Evaluation
             yield return null;
         }
     }
+
 }

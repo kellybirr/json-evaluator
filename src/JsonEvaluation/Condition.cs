@@ -50,6 +50,17 @@ namespace Coderz.Json.Evaluation
             return sb.ToString();
         }
 
+        public override RuleOptions Options
+        {
+            get => base.Options;
+            set
+            {   // cascade update
+                base.Options = value;
+                foreach (Rule rule in Rules)
+                    rule.Options = value;
+            }
+        }
+
         sealed class AndCondition : Condition
         {
             public override ConditionType Type => ConditionType.And;

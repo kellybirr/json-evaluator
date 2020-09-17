@@ -17,9 +17,11 @@ namespace Coderz.Json.Evaluation
             }
         }
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool CompareT(T dataValueT)
         {
-            return dataValue.HasValue && dataValue.Value.Equals(CompareValue);
+            return (typeof(T) == typeof(string))
+                ? (CompareStrings(dataValueT, CompareValue) == 0)
+                : dataValueT.Equals(CompareValue);
         }
     }
 
@@ -27,9 +29,9 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.NotIn : Operator.In;
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool CompareT(T dataValueT)
         {
-            return dataValue.HasValue && CompareList.Contains(dataValue.Value);
+            return CompareList.Contains(dataValueT);
         }
     }
 
@@ -37,9 +39,11 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.GreaterOrEqual : Operator.Less;
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool CompareT(T dataValueT)
         {
-            return dataValue.HasValue && (dataValue.Value.CompareTo(CompareValue) < 0);
+            return (typeof(T) == typeof(string))
+                ? (CompareStrings(dataValueT, CompareValue) < 0)
+                : (dataValueT.CompareTo(CompareValue) < 0);
         }
     }
 
@@ -47,9 +51,11 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.LessOrEqual : Operator.Greater;
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool CompareT(T dataValueT)
         {
-            return dataValue.HasValue && (dataValue.Value.CompareTo(CompareValue) > 0);
+            return (typeof(T) == typeof(string))
+                ? (CompareStrings(dataValueT, CompareValue) > 0)
+                : (dataValueT.CompareTo(CompareValue) > 0);
         }
     }
 
@@ -57,10 +63,12 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.NotBetween : Operator.Between;
 
-        protected override bool Compare(DataValue<T> dataValue)
-        {
+        protected override bool CompareT(T dataValueT)
+        {   
             T lowValue = CompareList[0], highValue = CompareList[1];
-            return dataValue.HasValue && (dataValue.Value.CompareTo(lowValue) >= 0 && dataValue.Value.CompareTo(highValue) <= 0);
+            return (typeof(T) == typeof(string))
+                ? (CompareStrings(dataValueT, lowValue) >= 0 && CompareStrings(dataValueT, highValue) <= 0)
+                : (dataValueT.CompareTo(lowValue) >= 0 && dataValueT.CompareTo(highValue) <= 0);
         }
     }
 
@@ -85,6 +93,7 @@ namespace Coderz.Json.Evaluation
         protected override bool Compare(DataValue<T> dataValue)
         {
             if (!dataValue.HasValue) return true;
+
             return (typeof(T) == typeof(string))
                 ? string.IsNullOrEmpty(dataValue.Value?.ToString())
                 : dataValue.Value.Equals(default);
@@ -109,29 +118,34 @@ namespace Coderz.Json.Evaluation
 
         private bool CompareDataToken(JToken dataToken)
         {
+            // data is array of items
             if (dataToken is JArray dataArray) 
-            {   // array contains item
-                return dataArray.Any(v =>
-                {
-                    DataValue<T> item = FromJToken(v);
-                    return item.HasValue && item.Value.Equals(CompareValue);
-                });
-            }
+                return dataArray.Any(TestArrayItem);
 
             DataValue<T> dataValue = FromJToken(dataToken);
             if (!dataValue.HasValue) return false;
 
-            // try string contains
+            // data is string - look for partial match
             if (typeof(T) == typeof(string) && dataValue.Value != null && CompareValue != null)
             {
                 string dataStr = dataValue.Value.ToString(), compareStr = CompareValue.ToString();
                 if (string.IsNullOrEmpty(dataStr) || string.IsNullOrEmpty(compareStr)) return false;
 
-                return dataStr.Contains(compareStr, StringComparison.InvariantCultureIgnoreCase);
+                return (Options.Culture.CompareInfo.IndexOf(dataStr, compareStr, Options.CompareOptions) >= 0);
             }
 
             // last resort (equals)
             return dataValue.Value?.Equals(CompareValue) ?? false;
+        }
+
+        private bool TestArrayItem(JToken itemToken)
+        {
+            DataValue<T> item = FromJToken(itemToken);
+            if (!item.HasValue) return false;
+
+            return (typeof(T) == typeof(string))
+                ? (CompareStrings(item.Value, CompareValue) == 0)
+                : item.Value.Equals(CompareValue);
         }
     }
 
@@ -139,19 +153,17 @@ namespace Coderz.Json.Evaluation
     {
         protected override bool MissingToken => Not;
 
-        protected abstract bool CheckString(string dataStr, string compareStr);
+        protected abstract bool CheckStringPart(string dataStr, string compareStr);
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool CompareT(T dataValueT)
         {
-            if (!dataValue.HasValue) return false;
-
-            string dataStr = dataValue.Value?.ToString();
+            string dataStr = dataValueT?.ToString();
             string compareStr = CompareValue?.ToString();
 
             if (string.IsNullOrEmpty(dataStr) || string.IsNullOrEmpty(compareStr))
                 return false;
 
-            return CheckString(dataStr, compareStr);
+            return CheckStringPart(dataStr, compareStr);
         }
     }
 
@@ -159,19 +171,15 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.NotBeginsWith : Operator.BeginsWith;
 
-        protected override bool CheckString(string dataStr, string compareStr)
-        {
-            return dataStr.StartsWith(compareStr, StringComparison.InvariantCultureIgnoreCase);
-        }
+        protected override bool CheckStringPart(string dataStr, string compareStr)
+            => Options.Culture.CompareInfo.IsPrefix(dataStr, compareStr, Options.CompareOptions);
     }
 
     class EndsWithRule<T>: StringPartRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.NotEndsWith : Operator.EndsWith;
 
-        protected override bool CheckString(string dataStr, string compareStr)
-        {
-            return dataStr.EndsWith(compareStr, StringComparison.InvariantCultureIgnoreCase);
-        }
+        protected override bool CheckStringPart(string dataStr, string compareStr)
+            => Options.Culture.CompareInfo.IsSuffix(dataStr, compareStr, Options.CompareOptions);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Coderz.Json.Evaluation;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -49,7 +50,11 @@ namespace JsonEvaluation.Tests
         public void Test_Rule_3()
         {
             JObject json = RuleJson();
-            var eval = new JsonEvaluator(json);
+            var eval = new JsonEvaluator(json)
+            {
+                Options = { CompareOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace }
+            };
+
             _output.WriteLine(eval.ToString());
 
             Assert.True(

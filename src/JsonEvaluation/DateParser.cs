@@ -7,30 +7,37 @@ namespace Coderz.Json.Evaluation
 {
     public static class DateParser
     {
-        public static DataValue<DateTime> DateOnly(JToken token)
+        public static DataValue<DateTime> DateOnly(JToken token) 
+            => DateOnly(token, CultureInfo.InvariantCulture);
+
+        public static DataValue<DateTime> DateOnly(JToken token, CultureInfo culture)
         {
-            DataValue<DateTimeOffset> value = DateAndTime(token);
+            DataValue<DateTimeOffset> value = DateAndTime(token, culture);
             return (value.HasValue)
                 ? new DataValue<DateTime>(value.Value.Date)
                 : new DataValue<DateTime>(false);
-        } 
+        }
 
-        public static DataValue<DateTimeOffset> DateAndTime(JToken token)
+        public static DataValue<DateTimeOffset> DateAndTime(JToken token) =>
+            DateAndTime(token, CultureInfo.InvariantCulture);
+
+        public static DataValue<DateTimeOffset> DateAndTime(JToken token, CultureInfo culture)
         {
             string tokenStr = token?.ToString();
             if (string.IsNullOrWhiteSpace(tokenStr)) 
                 return new DataValue<DateTimeOffset>(false);
 
-            if (DateTimeOffset.TryParse(tokenStr, out DateTimeOffset dto))
-                return new DataValue<DateTimeOffset>(dto);
-
-            if (DateTimeOffset.TryParse(tokenStr, null, DateTimeStyles.RoundtripKind, out dto))
-                return new DataValue<DateTimeOffset>(dto);
+            if (DateTimeOffset.TryParse(tokenStr, culture.DateTimeFormat, DateTimeStyles.None, out DateTimeOffset dto) || 
+                DateTimeOffset.TryParse(tokenStr, culture.DateTimeFormat, DateTimeStyles.RoundtripKind, out dto) 
+            ) return new DataValue<DateTimeOffset>(dto);
 
             return new DataValue<DateTimeOffset>(false);
         }
 
-        public static DataValue<TimeSpan> Duration(JToken token)
+        public static DataValue<TimeSpan> Duration(JToken token) 
+            => Duration(token, CultureInfo.InvariantCulture);
+
+        public static DataValue<TimeSpan> Duration(JToken token, CultureInfo culture)
         {
             string tokenStr = token?.ToString();
             if (string.IsNullOrWhiteSpace(tokenStr)) 
@@ -39,7 +46,7 @@ namespace Coderz.Json.Evaluation
             if (tokenStr.StartsWith("P", StringComparison.OrdinalIgnoreCase))
                 return Iso8601Duration(tokenStr);
 
-            if (TimeSpan.TryParse(tokenStr, out TimeSpan ts))
+            if (TimeSpan.TryParse(tokenStr, culture.DateTimeFormat, out TimeSpan ts))
                 return new DataValue<TimeSpan>(ts);
 
             return new DataValue<TimeSpan>(false);
@@ -59,9 +66,10 @@ namespace Coderz.Json.Evaluation
             return new DataValue<TimeSpan>(new TimeSpan(days, hours, minutes, seconds));
         }
 
+        // always CultureInvariant & IgnoreCase (acceptable limitation)
         private static readonly Regex Ido8601Regex = new Regex( // no years or months allowed
                 @"^P(?:(?<days>\d+)D)?(?:T(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?(?:(?<seconds>\d+)S)?)?$",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled
+                RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled
                 );
     }
 }

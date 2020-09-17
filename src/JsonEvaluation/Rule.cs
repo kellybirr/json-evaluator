@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
+// ReSharper disable ConvertIfStatementToReturnStatement
+// ReSharper disable InvertIf
 
 namespace Coderz.Json.Evaluation
 {
@@ -8,28 +11,34 @@ namespace Coderz.Json.Evaluation
     {
         public abstract bool Evaluate(JObject data);
 
-        public static Rule Parse(JObject json)
+        public virtual RuleOptions Options { get; set; }
+
+        public static Rule Parse(JObject json) => Parse(json, new RuleOptions());
+
+        public static Rule Parse(JObject json, RuleOptions options)
         {
             // condition (rule set)
             if (json.TryGetValue(TokenName.Condition, out JToken conditionToken))
-                return ParseCondition(json, conditionToken);
+                return ParseCondition(json, conditionToken, options);
 
-            return ParseFieldRule(json);
+            return ParseFieldRule(json, options);
         }
 
         public virtual string ToFriendlyString() => ToString();
 
-        private static Rule ParseCondition(JObject json, JToken conditionToken)
+        private static Rule ParseCondition(JObject json, JToken conditionToken, RuleOptions options)
         {
             // create condition
             var conditionObj = Condition.Create((string) conditionToken);
+            conditionObj.Options = options;
+
+            // process rules
             if (json.TryGetValue(TokenName.Rules, out JToken rulesToken) && rulesToken is JArray rulesArray)
             {
-                // process rules
                 foreach (JToken subRule in rulesArray)
                 {
                     if (subRule is JObject subRuleObj)
-                        conditionObj.Rules.Add(Rule.Parse(subRuleObj));
+                        conditionObj.Rules.Add(Rule.Parse(subRuleObj, options));
                 }
             }
 
@@ -40,7 +49,7 @@ namespace Coderz.Json.Evaluation
             return conditionObj;
         }
 
-        private static Rule ParseFieldRule(JObject json)
+        private static Rule ParseFieldRule(JObject json, RuleOptions options)
         {
             // parse operator
             string operatorStr = json[TokenName.Operator]?.ToString() ?? throw new ArgumentException("Missing 'operator'");
@@ -63,10 +72,18 @@ namespace Coderz.Json.Evaluation
                 _ => throw new ArgumentOutOfRangeException()
             };
 
+            ruleObj.Options = options;
+
             ruleObj.Field = json[TokenName.Field]?.ToString() ?? throw new ArgumentException("Missing 'field'");
             ruleObj.Value = json[TokenName.Value];
 
             return ruleObj;
         }
+    }
+
+    public class RuleOptions
+    {
+        public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
+        public CompareOptions CompareOptions { get; set; }
     }
 }
