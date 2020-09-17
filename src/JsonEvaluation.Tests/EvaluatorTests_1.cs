@@ -9,11 +9,11 @@ namespace JsonEvaluation.Tests
 {
     [SuppressMessage("ReSharper", "InconsistentNaming")]
 
-    public class EvaluatorTests_1
+    public class EvaluatorTests_4
     {
         private readonly ITestOutputHelper _output;
 
-        public EvaluatorTests_1(ITestOutputHelper output)
+        public EvaluatorTests_4(ITestOutputHelper output)
         {
             _output = output;
         }
@@ -25,25 +25,14 @@ namespace JsonEvaluation.Tests
                 {"condition", "AND"},
                 {"rules", new JArray
                     {   
-                        new JObject { {"field","name"},{"type","string"},{"operator","contains"},{"value","joe"} },
-                        new JObject { {"field","price"},{"type","double"},{"operator","between"},{"value",JArray.Parse("[8.00,11.00]")} },
-                        new JObject
-                        {
-                            {"condition", "OR"},
-                            {"rules", new JArray
-                                {
-                                    new JObject { {"field","category"},{"type","integer"},{"operator","equal"},{"value", 1} },
-                                    new JObject { {"field","category"},{"type","integer"},{"operator","in"},{"value", JArray.Parse("[2,3,4]")} },
-                                }
-                            }
-                        }
+                        new JObject { {"field","product"},{"type","string"},{"operator","in"},{"value", JArray.Parse("['hat','shirt']")} },
                     }
                 }
             };
         }
 
         [Fact]
-        public void Test_Rule_1_IgnoreCase()
+        public void Test_Rule_4_IgnoreCase()
         {
             JObject json = RuleJson();
             var eval = new JsonEvaluator(json)
@@ -55,9 +44,8 @@ namespace JsonEvaluation.Tests
             Assert.True(
                 eval.Evaluate(new JObject
                 {
-                    {"name", "Top plays by Joe Montana"},
-                    {"price", 10.00},
-                    {"category", 2}
+                    {"amount", 10},
+                    {"product", "Hat"}
                 })
             );
 
@@ -65,42 +53,13 @@ namespace JsonEvaluation.Tests
                 eval.Evaluate(new JObject
                 {
                     {"amount", 30},
-                    {"date", "12/31/2019"}
-                })
-            );
-
-        }
-
-        [Fact]
-        public void Test_Rule_1_IgnoreAccent()
-        {
-            JObject json = RuleJson();
-            var eval = new JsonEvaluator(json)
-            {
-                Options = { CompareOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace }
-            };
-            _output.WriteLine(eval.ToString());
-
-            Assert.True(
-                eval.Evaluate(new JObject
-                {
-                    {"name", "Top plays by Joë Montana"},
-                    {"price", 10.00},
-                    {"category", 2}
-                })
-            );
-
-            Assert.False(
-                eval.Evaluate(new JObject
-                {
-                    {"amount", 30},
-                    {"date", "12/31/2019"}
+                    {"product", "Pants"}
                 })
             );
         }
 
         [Fact]
-        public void Test_Rule_1_Exact()
+        public void Test_Rule_4_Exact()
         {
             JObject json = RuleJson();
             var eval = new JsonEvaluator(json);
@@ -109,17 +68,16 @@ namespace JsonEvaluation.Tests
             Assert.False(
                 eval.Evaluate(new JObject
                 {
-                    {"name", "Top plays by Joe Montana"},
-                    {"price", 10.00},
-                    {"category", 2}
+                    {"amount", 10},
+                    {"product", "Hat"}
                 })
             );
 
-            Assert.False(
+            Assert.True(
                 eval.Evaluate(new JObject
                 {
                     {"amount", 30},
-                    {"date", "12/31/2019"}
+                    {"product", "shirt"}
                 })
             );
         }

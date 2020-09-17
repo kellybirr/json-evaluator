@@ -31,7 +31,9 @@ namespace Coderz.Json.Evaluation
 
         protected override bool CompareT(T dataValueT)
         {
-            return CompareList.Contains(dataValueT);
+            return (typeof(T) == typeof(string))
+                ? CompareList.Any(v => CompareStrings(dataValueT, v) == 0) 
+                : CompareList.Contains(dataValueT);
         }
     }
 

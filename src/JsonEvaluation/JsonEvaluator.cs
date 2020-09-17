@@ -40,5 +40,4 @@ namespace Coderz.Json.Evaluation
             yield return null;
         }
     }
-
 }
