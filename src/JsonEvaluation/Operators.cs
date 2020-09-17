@@ -17,48 +17,37 @@ namespace Coderz.Json.Evaluation
             }
         }
 
-        protected override bool CompareT(T dataValueT)
-        {
-            return (typeof(T) == typeof(string))
-                ? (CompareStrings(dataValueT, CompareValue) == 0)
-                : dataValueT.Equals(CompareValue);
-        }
+        protected override bool CompareT(T dataValueT) => dataValueT.Equals(CompareValue);
+
+        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) == 0);
     }
 
     class InFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.NotIn : Operator.In;
 
-        protected override bool CompareT(T dataValueT)
-        {
-            return (typeof(T) == typeof(string))
-                ? CompareList.Any(v => CompareStrings(dataValueT, v) == 0) 
-                : CompareList.Contains(dataValueT);
-        }
+        protected override bool CompareT(T dataValueT) => CompareList.Contains(dataValueT);
+
+        protected override bool CompareS(T dataValueT)
+            => CompareList.Any(v => CompareStrings(dataValueT, v) == 0);
     }
 
     class LessFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.GreaterOrEqual : Operator.Less;
 
-        protected override bool CompareT(T dataValueT)
-        {
-            return (typeof(T) == typeof(string))
-                ? (CompareStrings(dataValueT, CompareValue) < 0)
-                : (dataValueT.CompareTo(CompareValue) < 0);
-        }
+        protected override bool CompareT(T dataValueT) => (dataValueT.CompareTo(CompareValue) < 0);
+
+        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) < 0);
     }
 
     class GreaterFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.LessOrEqual : Operator.Greater;
 
-        protected override bool CompareT(T dataValueT)
-        {
-            return (typeof(T) == typeof(string))
-                ? (CompareStrings(dataValueT, CompareValue) > 0)
-                : (dataValueT.CompareTo(CompareValue) > 0);
-        }
+        protected override bool CompareT(T dataValueT) => (dataValueT.CompareTo(CompareValue) > 0);
+
+        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) > 0);
     }
 
     class BetweenFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
@@ -68,9 +57,13 @@ namespace Coderz.Json.Evaluation
         protected override bool CompareT(T dataValueT)
         {   
             T lowValue = CompareList[0], highValue = CompareList[1];
-            return (typeof(T) == typeof(string))
-                ? (CompareStrings(dataValueT, lowValue) >= 0 && CompareStrings(dataValueT, highValue) <= 0)
-                : (dataValueT.CompareTo(lowValue) >= 0 && dataValueT.CompareTo(highValue) <= 0);
+            return (dataValueT.CompareTo(lowValue) >= 0 && dataValueT.CompareTo(highValue) <= 0);
+        }
+
+        protected override bool CompareS(T dataValueT)
+        {
+            T lowValue = CompareList[0], highValue = CompareList[1];
+            return (CompareStrings(dataValueT, lowValue) >= 0 && CompareStrings(dataValueT, highValue) <= 0);
         }
     }
 
@@ -88,23 +81,44 @@ namespace Coderz.Json.Evaluation
 
     class EmptyFieldRule<T>: FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
+        private readonly Func<T, bool> _isEmptyFunc;
+
+        public EmptyFieldRule()
+        {
+            if (typeof(T) == typeof(string))
+                _isEmptyFunc = d => string.IsNullOrEmpty(d?.ToString());
+            else
+                _isEmptyFunc = d => d.Equals(default);
+        }
+
         public override Operator Operator => (Not) ? Operator.IsNotEmpty : Operator.IsEmpty;
 
         protected override bool MissingToken => !Not;
 
         protected override bool Compare(DataValue<T> dataValue)
         {
-            if (!dataValue.HasValue) return true;
-
-            return (typeof(T) == typeof(string))
-                ? string.IsNullOrEmpty(dataValue.Value?.ToString())
-                : dataValue.Value.Equals(default);
+            return !dataValue.HasValue || _isEmptyFunc(dataValue.Value);
         }
-
     }
 
     class ContainsFieldRule<T>: FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
+        private readonly Func<T, bool> _singleTestFunc, _arrayTestFunc;
+
+        public ContainsFieldRule()
+        {
+            if (typeof(T) == typeof(string))
+            {
+                _singleTestFunc = TestStringContains;
+                _arrayTestFunc = v => CompareStrings(v, CompareValue) == 0;
+            }
+            else
+            {
+                _singleTestFunc = d => d?.Equals(CompareValue) ?? false;
+                _arrayTestFunc = v => v.Equals(CompareValue);
+            }
+        }
+
         public override Operator Operator => (Not) ? Operator.NotContains : Operator.Contains;
 
         protected override bool MissingToken => Not;
@@ -124,30 +138,23 @@ namespace Coderz.Json.Evaluation
             if (dataToken is JArray dataArray) 
                 return dataArray.Any(TestArrayItem);
 
+            // single item, like string.contains
             DataValue<T> dataValue = FromJToken(dataToken);
-            if (!dataValue.HasValue) return false;
-
-            // data is string - look for partial match
-            if (typeof(T) == typeof(string) && dataValue.Value != null && CompareValue != null)
-            {
-                string dataStr = dataValue.Value.ToString(), compareStr = CompareValue.ToString();
-                if (string.IsNullOrEmpty(dataStr) || string.IsNullOrEmpty(compareStr)) return false;
-
-                return (Options.Culture.CompareInfo.IndexOf(dataStr, compareStr, Options.CompareOptions) >= 0);
-            }
-
-            // last resort (equals)
-            return dataValue.Value?.Equals(CompareValue) ?? false;
+            return dataValue.HasValue && _singleTestFunc(dataValue.Value);
         }
 
         private bool TestArrayItem(JToken itemToken)
         {
             DataValue<T> item = FromJToken(itemToken);
-            if (!item.HasValue) return false;
+            return item.HasValue && _arrayTestFunc(item.Value);
+        }
 
-            return (typeof(T) == typeof(string))
-                ? (CompareStrings(item.Value, CompareValue) == 0)
-                : item.Value.Equals(CompareValue);
+        private bool TestStringContains(T dataValueT)
+        {
+            string dataStr = dataValueT?.ToString(), compareStr = CompareValue?.ToString();
+            if (string.IsNullOrEmpty(dataStr) || string.IsNullOrEmpty(compareStr)) return false;
+
+            return Options.Culture.CompareInfo.IndexOf(dataStr, compareStr, Options.CompareOptions) >= 0;
         }
     }
 
@@ -157,7 +164,7 @@ namespace Coderz.Json.Evaluation
 
         protected abstract bool CheckStringPart(string dataStr, string compareStr);
 
-        protected override bool CompareT(T dataValueT)
+        private bool CompareInternal(T dataValueT)
         {
             string dataStr = dataValueT?.ToString();
             string compareStr = CompareValue?.ToString();
@@ -167,6 +174,9 @@ namespace Coderz.Json.Evaluation
 
             return CheckStringPart(dataStr, compareStr);
         }
+
+        protected override bool CompareT(T dataValueT) => CompareInternal(dataValueT);
+        protected override bool CompareS(T dataValueT) => CompareInternal(dataValueT);
     }
 
     class BeginsWithRule<T>: StringPartRule<T> where T: IComparable<T>, IEquatable<T>

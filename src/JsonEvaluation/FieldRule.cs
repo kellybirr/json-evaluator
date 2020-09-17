@@ -56,28 +56,39 @@ namespace Coderz.Json.Evaluation
 
     public abstract class FieldRule<T> : FieldRule where T : IComparable<T>, IEquatable<T>
     {
+        private readonly Func<T, bool> _compareFunc;
+
         protected FieldRule()
         {
-            if (typeof(T) == typeof(string)) 
+            if (typeof(T) == typeof(string))
+            {
+                _compareFunc = CompareS;
                 Type = FieldType.String;
-            else if (typeof(T) == typeof(long)) 
-                Type = FieldType.Integer;
-            else if (typeof(T) == typeof(double))
-                Type = FieldType.Double;
-            else if (typeof(T) == typeof(bool))
-                Type = FieldType.Boolean;
-            else if (typeof(T) == typeof(DateTimeOffset))
-                Type = FieldType.DateTime;
-            else if (typeof(T) == typeof(DateTime))
-                Type = FieldType.Date;
-            else if (typeof(T) == typeof(TimeSpan))
-                Type = FieldType.Duration;
+            }
+            else
+            {
+                _compareFunc = CompareT;
+                if (typeof(T) == typeof(long))
+                    Type = FieldType.Integer;
+                else if (typeof(T) == typeof(double))
+                    Type = FieldType.Double;
+                else if (typeof(T) == typeof(bool))
+                    Type = FieldType.Boolean;
+                else if (typeof(T) == typeof(DateTimeOffset))
+                    Type = FieldType.DateTime;
+                else if (typeof(T) == typeof(DateTime))
+                    Type = FieldType.Date;
+                else if (typeof(T) == typeof(TimeSpan))
+                    Type = FieldType.Duration;
+            }
         }
 
         protected virtual bool Compare(DataValue<T> dataValue)
-            => dataValue.HasValue && CompareT(dataValue.Value);
+            => dataValue.HasValue && _compareFunc(dataValue.Value);
 
         protected virtual bool CompareT(T dataValueT) => false;
+
+        protected virtual bool CompareS(T dataValueT) => false;
 
         protected virtual bool MissingToken => false;
 
