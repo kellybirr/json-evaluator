@@ -39,8 +39,10 @@ namespace JsonEvaluation.Tests
         [InlineData("P3DT2H30M5S")]
         public void Test_Duration_Parsing(string duration)
         {
-            TimeSpan ts = DateParser.Duration( new JValue(duration) );
-            _output.WriteLine(ts.ToString());
+            DataValue<TimeSpan> ts = DateParser.Duration( new JValue(duration) );
+            Assert.True(ts.HasValue);
+
+            _output.WriteLine(ts.Value.ToString());
         }
 
         [Fact]

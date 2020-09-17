@@ -23,11 +23,11 @@
         IsEmpty,
         IsNotEmpty,
         Contains,
-        DoesNotContain,
+        NotContains,
         BeginsWith,
-        DoesNotBeginWith,
+        NotBeginsWith,
         EndsWith,
-        DoesNotEndWith
+        NotEndsWith
     }
 
     public enum FieldType

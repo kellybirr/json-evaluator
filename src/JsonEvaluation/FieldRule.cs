@@ -41,11 +41,11 @@ namespace Coderz.Json.Evaluation
                 Operator.IsEmpty => new EmptyFieldRule<T>(),
                 Operator.IsNotEmpty => new EmptyFieldRule<T> {Not = true},
                 Operator.Contains => new ContainsFieldRule<T>(),
-                Operator.DoesNotContain => new ContainsFieldRule<T> {Not = true},
+                Operator.NotContains => new ContainsFieldRule<T> {Not = true},
                 Operator.BeginsWith => new BeginsWithRule<T>(),
-                Operator.DoesNotBeginWith => new BeginsWithRule<T> {Not = true},
+                Operator.NotBeginsWith => new BeginsWithRule<T> {Not = true},
                 Operator.EndsWith => new EndsWithRule<T>(),
-                Operator.DoesNotEndWith => new EndsWithRule<T> {Not = true},
+                Operator.NotEndsWith => new EndsWithRule<T> {Not = true},
                 _ => throw new ArgumentOutOfRangeException(nameof(op), op, "Invalid Operator")
             };
         }
@@ -71,7 +71,7 @@ namespace Coderz.Json.Evaluation
                 Type = FieldType.Duration;
         }
 
-        protected virtual bool Compare(T dataValue) => false;
+        protected virtual bool Compare(DataValue<T> dataValue) => false;
 
         protected virtual bool MissingToken => false;
 
@@ -80,7 +80,7 @@ namespace Coderz.Json.Evaluation
             JToken dataToken = GetDataToken(data);
             if (dataToken == null) return MissingToken;
 
-            T dataValue = FromJToken(dataToken);
+            DataValue<T> dataValue = FromJToken(dataToken);
 
             bool res = Compare(dataValue);
             return Not ? !res : res;
@@ -105,26 +105,26 @@ namespace Coderz.Json.Evaluation
                 base.Value = value;
 
                 CompareList = (value is JArray valueArray)
-                    ? (from token in valueArray select FromJToken(token)).ToList()
-                    : new List<T> { FromJToken(value) };
+                    ? (from token in valueArray select FromJToken(token).Value).ToList()
+                    : new List<T> { FromJToken(value).Value };
 
                 CompareValue = CompareList.FirstOrDefault();
             }
         }
 
-        protected static T FromJToken(JToken token)
+        protected static DataValue<T> FromJToken(JToken token)
         {
-            if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token) is T dtoT)
+            if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token) is DataValue<T> dtoT)
                 return dtoT;    // special handling for DateTimeOffset (date + time + offset)
 
-            if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token) is T dT)
+            if (typeof(T) == typeof(DateTime) && DateParser.DateOnly(token) is DataValue<T> dT)
                 return dT;    // special handling for DateTime (date only)
 
-            if (typeof(T) == typeof(TimeSpan) && DateParser.Duration(token) is T tsT)
+            if (typeof(T) == typeof(TimeSpan) && DateParser.Duration(token) is DataValue<T> tsT)
                 return tsT;    // special handling for TimeSpan (duration)
 
             // default conversion
-            return (T) Convert.ChangeType(token, typeof(T));
+            return new DataValue<T>((T)Convert.ChangeType(token, typeof(T)));
         }
     }
 }
