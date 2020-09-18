@@ -62,12 +62,12 @@ namespace Coderz.Json.Evaluation
         {
             if (typeof(T) == typeof(string))
             {
-                _compareFunc = CompareS;
+                _compareFunc = DoCompareAsString;
                 Type = FieldType.String;
             }
             else
             {
-                _compareFunc = CompareT;
+                _compareFunc = DoCompareAsT;
                 if (typeof(T) == typeof(long))
                     Type = FieldType.Integer;
                 else if (typeof(T) == typeof(double))
@@ -83,12 +83,12 @@ namespace Coderz.Json.Evaluation
             }
         }
 
-        protected virtual bool Compare(DataValue<T> dataValue)
+        protected virtual bool DoCompare(DataValue<T> dataValue)
             => dataValue.HasValue && _compareFunc(dataValue.Value);
 
-        protected virtual bool CompareT(T dataValueT) => false;
+        protected virtual bool DoCompareAsT(T dataValueT) => false;
 
-        protected virtual bool CompareS(T dataValueT) => false;
+        protected virtual bool DoCompareAsString(T dataValueT) => false;
 
         protected virtual bool MissingToken => false;
 
@@ -99,7 +99,7 @@ namespace Coderz.Json.Evaluation
 
             DataValue<T> dataValue = FromJToken(dataToken);
 
-            bool res = Compare(dataValue);
+            bool res = DoCompare(dataValue);
             return Not ? !res : res;
         }
 
@@ -111,7 +111,7 @@ namespace Coderz.Json.Evaluation
 
         protected IList<T> CompareList { get; private set; }
 
-        protected virtual T CompareValue { get; private set; }
+        protected T CompareValue { get; private set; }
 
         public override JToken Value
         {

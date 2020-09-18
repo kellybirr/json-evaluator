@@ -17,18 +17,18 @@ namespace Coderz.Json.Evaluation
             }
         }
 
-        protected override bool CompareT(T dataValueT) => dataValueT.Equals(CompareValue);
+        protected override bool DoCompareAsT(T dataValueT) => dataValueT.Equals(CompareValue);
 
-        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) == 0);
+        protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) == 0);
     }
 
     class InFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.NotIn : Operator.In;
 
-        protected override bool CompareT(T dataValueT) => CompareList.Contains(dataValueT);
+        protected override bool DoCompareAsT(T dataValueT) => CompareList.Contains(dataValueT);
 
-        protected override bool CompareS(T dataValueT)
+        protected override bool DoCompareAsString(T dataValueT)
             => CompareList.Any(v => CompareStrings(dataValueT, v) == 0);
     }
 
@@ -36,31 +36,31 @@ namespace Coderz.Json.Evaluation
     {
         public override Operator Operator => (Not) ? Operator.GreaterOrEqual : Operator.Less;
 
-        protected override bool CompareT(T dataValueT) => (dataValueT.CompareTo(CompareValue) < 0);
+        protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) < 0);
 
-        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) < 0);
+        protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) < 0);
     }
 
     class GreaterFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.LessOrEqual : Operator.Greater;
 
-        protected override bool CompareT(T dataValueT) => (dataValueT.CompareTo(CompareValue) > 0);
+        protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) > 0);
 
-        protected override bool CompareS(T dataValueT) => (CompareStrings(dataValueT, CompareValue) > 0);
+        protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) > 0);
     }
 
     class BetweenFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
         public override Operator Operator => (Not) ? Operator.NotBetween : Operator.Between;
 
-        protected override bool CompareT(T dataValueT)
+        protected override bool DoCompareAsT(T dataValueT)
         {   
             T lowValue = CompareList[0], highValue = CompareList[1];
             return (dataValueT.CompareTo(lowValue) >= 0 && dataValueT.CompareTo(highValue) <= 0);
         }
 
-        protected override bool CompareS(T dataValueT)
+        protected override bool DoCompareAsString(T dataValueT)
         {
             T lowValue = CompareList[0], highValue = CompareList[1];
             return (CompareStrings(dataValueT, lowValue) >= 0 && CompareStrings(dataValueT, highValue) <= 0);
@@ -73,7 +73,7 @@ namespace Coderz.Json.Evaluation
 
         protected override bool MissingToken => !Not;
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool DoCompare(DataValue<T> dataValue)
         {
             return !dataValue.HasValue || dataValue.Value.Equals(null);
         }
@@ -95,7 +95,7 @@ namespace Coderz.Json.Evaluation
 
         protected override bool MissingToken => !Not;
 
-        protected override bool Compare(DataValue<T> dataValue)
+        protected override bool DoCompare(DataValue<T> dataValue)
         {
             return !dataValue.HasValue || _isEmptyFunc(dataValue.Value);
         }
@@ -164,9 +164,9 @@ namespace Coderz.Json.Evaluation
 
         protected abstract bool CheckStringPart(string dataStr, string compareStr);
 
-        private bool CompareInternal(T dataValueT)
+        protected override bool DoCompare(DataValue<T> dataValue)
         {
-            string dataStr = dataValueT?.ToString();
+            string dataStr = dataValue.Value?.ToString();
             string compareStr = CompareValue?.ToString();
 
             if (string.IsNullOrEmpty(dataStr) || string.IsNullOrEmpty(compareStr))
@@ -174,9 +174,6 @@ namespace Coderz.Json.Evaluation
 
             return CheckStringPart(dataStr, compareStr);
         }
-
-        protected override bool CompareT(T dataValueT) => CompareInternal(dataValueT);
-        protected override bool CompareS(T dataValueT) => CompareInternal(dataValueT);
     }
 
     class BeginsWithRule<T>: StringPartRule<T> where T: IComparable<T>, IEquatable<T>
