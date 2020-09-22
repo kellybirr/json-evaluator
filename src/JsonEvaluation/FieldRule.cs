@@ -130,6 +130,10 @@ namespace Coderz.Json.Evaluation
 
         protected DataValue<T> FromJToken(JToken token)
         {
+            // explicit null token
+            if (token.Type == JTokenType.Null) 
+                return new DataValue<T>(false);
+
             if (typeof(T) == typeof(DateTimeOffset) && DateParser.DateAndTime(token, Options.Culture) is DataValue<T> dtoT)
                 return dtoT;    // special handling for DateTimeOffset (date + time + offset)
 
