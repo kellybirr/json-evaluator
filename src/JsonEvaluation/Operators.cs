@@ -34,20 +34,38 @@ namespace Coderz.Json.Evaluation
 
     class LessFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
-        public override Operator Operator => (Not) ? Operator.GreaterOrEqual : Operator.Less;
+        public override Operator Operator => Operator.Less;
 
         protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) < 0);
 
         protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) < 0);
     }
 
+    class LessOrEqualFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
+    {
+        public override Operator Operator => Operator.LessOrEqual;
+
+        protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) <= 0);
+
+        protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) <= 0);
+    }
+
     class GreaterFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
     {
-        public override Operator Operator => (Not) ? Operator.LessOrEqual : Operator.Greater;
+        public override Operator Operator => Operator.Greater;
 
         protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) > 0);
 
         protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) > 0);
+    }
+
+    class GreaterOrEqualFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
+    {
+        public override Operator Operator => Operator.GreaterOrEqual;
+
+        protected override bool DoCompareAsT(T dataValueT) => (dataValueT.CompareTo(CompareValue) >= 0);
+
+        protected override bool DoCompareAsString(T dataValueT) => (CompareStrings(dataValueT, CompareValue) >= 0);
     }
 
     class BetweenFieldRule<T> : FieldRule<T> where T: IComparable<T>, IEquatable<T>
